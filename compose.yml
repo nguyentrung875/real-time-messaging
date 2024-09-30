@@ -1,0 +1,37 @@
+version: '3'
+services:
+  kafka:
+    image: bitnami/kafka:latest  # Sử dụng image Kafka của Bitnami
+    container_name: kafka_kraft
+    ports:
+      - '9094:9094'  # Cổng Kafka cho các kết nối bên ngoài
+    environment:
+      - KAFKA_CFG_NODE_ID=0  # Node ID cho Kafka broker
+      - KAFKA_CFG_CONTROLLER_BROKER_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller  # Xác định vai trò của Kafka node (vừa làm broker vừa làm controller)
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@localhost:9092  # Thiết lập quorum voters cho KRaft mode
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093, EXTERNAL://0.0.0.0:9094  # Cấu hình các listener cho Kafka, Định nghĩa các cổng mà Kafka sẽ lắng nghe
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://192.168.5.6:9094  # Thông báo các listener, Là những địa chỉ mà Kafka sẽ quảng bá (advertise) cho client, chỉ định cách thức client nên kết nối đến Kafka broker (dựa trên mạng mà client đang kết nối từ đó, nội bộ hay bên ngoài).
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT #4
+      - KAFKA_CFG_LOG_DIRS=/bitnami/kafka/data  # Thư mục lưu trữ dữ liệu Kafka
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093  # Thiết lập quorum voters cho KRaft mode
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+    networks:
+      - kafka-network
+
+  kafka-ui:
+    image: 'provectuslabs/kafka-ui:latest'
+    container_name: kafka-ui
+    ports:
+      - '8080:8080'
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local #5
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092 #6
+    networks:
+      - kafka-network
+
+networks:
+  kafka-network:  # Định nghĩa một mạng bridge cho các dịch vụ trong Docker Compose.
+    driver: bridge  # Loại mạng là 'bridge', giúp các container liên kết và giao tiếp với nhau dễ dàng.

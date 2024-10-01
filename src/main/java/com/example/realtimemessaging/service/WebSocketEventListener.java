@@ -1,5 +1,6 @@
 package com.example.realtimemessaging.service;
 
+import ch.qos.logback.classic.helpers.MDCInsertingServletFilter;
 import com.example.realtimemessaging.modal.Message;
 import com.example.realtimemessaging.modal.MessageType;
 import org.slf4j.Logger;
@@ -21,18 +22,21 @@ public class WebSocketEventListener {
         this.messagingTemplate = messagingTemplate;
     }
 
-    @EventListener
+    @EventListener //lắng nghe sự kiện có client mới kết nối thành công websocket
     public void handleWebSocketConnectListener(SessionConnectedEvent event) {
         logger.info("Received a new web socket connection");
     }
 
-    @EventListener
+    @EventListener //lắng nghe sự kiện ngắt kết nối với websocket
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
+        //Lấy thông tin user từ session attributes đã lưu trước đó
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         String username = (String) headerAccessor.getSessionAttributes().get("username");
 
         if (username != null) {
             logger.info("User Disconnected: " + username);
+
+            //Gửi thông điệp DISCONNECT tới tất cả ng dùng trong kênh "/topic/public"
             Message chatMessage = new Message();
             chatMessage.setType(MessageType.DISCONNECT);
             chatMessage.setSender(username);

@@ -14,7 +14,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RestController;
 
-@Controller
+@RestController
 public class MessageController {
 
     private final Sender sender;
@@ -26,21 +26,16 @@ public class MessageController {
         this.messagingTemplate = messagingTemplate;
     }
 
-    @MessageMapping("/chat.send-message")
+    @MessageMapping("/chat.send-message") //gửi message đến WS với entry app/chat.send-message
     public void sendMessage(@Payload Message chatMessage, SimpMessageHeaderAccessor headerAccessor) {
         chatMessage.setSessionId(headerAccessor.getSessionId());
         sender.send("messaging", chatMessage); //gửi message lên topic "messaging" của kafka
-        logger.info("Sending message to /topic/public: " + chatMessage);
-        messagingTemplate.convertAndSend("/topic/public", chatMessage); //gửi message đến topic public của websocket
-        logger.info("Message sent to /topic/public: " + chatMessage);
     }
 
-    @MessageMapping("/chat.add-user")
-    @SendTo("/topic/public") //Gửi đến broker websocket
-    public Message addUser(
-            @Payload Message chatMessage,
-            SimpMessageHeaderAccessor headerAccessor
-    ) {
+    @MessageMapping("/chat.add-user") //Gửi message thêm mới user
+    @SendTo("/topic/public") // đến broker websocket, gửi đến tất cả các client đang lắng nghe từ topic này
+    public Message addUser(@Payload Message chatMessage, SimpMessageHeaderAccessor headerAccessor) {
+        //Lưu trữ tên người dùng trong session WebSocket để sử dụng trong các tương tác sau này giữa server và client.
         if (headerAccessor.getSessionAttributes() != null) {
             headerAccessor.getSessionAttributes().put("username", chatMessage.getSender());
         }
